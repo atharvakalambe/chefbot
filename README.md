@@ -1,113 +1,143 @@
 # 🍳 ChefBot — AI Cooking Assistant
 
-A full-stack AI cooking assistant chatbot built with **Next.js 15** (App Router) and **Google Gemini**. Tell it what ingredients you have, your dietary preferences, or just describe your mood — it generates complete, structured recipes in real time.
+A full-stack AI cooking assistant chatbot built with **Next.js 16** (App Router) and **Google Gemini**. Tell it what ingredients you have, your dietary preferences, or your desired cooking time — it generates complete, structured recipes in real time.
 
-![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
-![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-orange?logo=google)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-cooking--chatbot--three.vercel.app-brightgreen?style=for-the-badge&logo=vercel)](https://cooking-chatbot-three.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.5_Flash-orange?style=for-the-badge&logo=google)](https://ai.google.dev/)
+
+---
+
+### 🌐 Live Application
+🔗 **Live URL:** [https://cooking-chatbot-three.vercel.app](https://cooking-chatbot-three.vercel.app)
+
+---
 
 ## ✨ Features
 
-- **Natural language chat** — talk like you would to a friend: "I have chicken, rice, and 20 minutes"
-- **Structured recipe cards** — beautifully rendered with title, servings, ingredients, steps, and cook time
-- **Quick-pick filter chips** — dietary restrictions, cuisine type, and time available
-- **Conversation context** — ask follow-ups like "make it vegan" or "double the servings"
-- **Server-side AI calls** — API key never exposed to the browser
-- **Stunning dark UI** — glassmorphic design with smooth animations
+- **Natural Language Chat** — Talk naturally: *"I have chicken, rice, and 20 minutes"* or *"Vegetarian dinner, no dairy, feeling spicy"*.
+- **Structured Recipe Cards** — Beautiful glassmorphic UI displaying prep time, cook time, difficulty badge, servings, ingredient amounts, and numbered steps.
+- **Interactive Quick-Pick Filters** — Instant chips for Dietary Restrictions (Vegetarian, Vegan, Gluten-Free, None), Cuisine Type (Italian, Indian, Mexican, Asian, Any), and Time constraints (15 min, 30 min, 1 hr+).
+- **Conversational Memory** — Context-aware follow-ups: *"Make it vegan"*, *"Double the servings"*, or *"Substitute pasta for rice"*.
+- **Multi-Model Quota Fallback** — Automated cascade across Gemini model tiers (`gemini-3.5-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`) ensuring zero downtime on free-tier rate limits.
+- **Enterprise-Grade Security** — All Gemini API operations are executed server-side; API keys are never exposed to the client browser.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | Next.js 16 (App Router) |
+| **Language** | TypeScript |
+| **AI Models** | Google Gemini 3.5 Flash-Lite / 2.5 Flash via `@google/genai` |
+| **Styling** | Vanilla CSS Design System with Glassmorphism & Custom Properties |
+| **Typography** | Inter & JetBrains Mono |
+| **Hosting & CI/CD** | Vercel Global Edge Network |
+
+---
 
 ## 📋 Prerequisites
 
-- **Node.js** 20 or later
-- **Gemini API key** — get one free at [Google AI Studio](https://aistudio.google.com/)
+- **Node.js** (v20.x or later)
+- **Google Gemini API Key** — Available at [Google AI Studio](https://aistudio.google.com/)
 
-## 🚀 Setup
+---
 
-1. **Clone the repo**
+## 🚀 Local Development Setup
+
+1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url> cooking-chatbot
-   cd cooking-chatbot
+   git clone https://github.com/atharvakalambe/chefbot.git
+   cd chefbot
    ```
 
-2. **Install dependencies**
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. **Configure your API key**
-   
-   Copy the example env file and add your key:
+3. **Configure Environment Variables:**
+   Copy `.env.example` to `.env.local`:
    ```bash
    cp .env.example .env.local
    ```
-   
-   Edit `.env.local`:
-   ```
-   GEMINI_API_KEY=your_actual_api_key_here
+   Add your Gemini API key inside `.env.local`:
+   ```env
+   GEMINI_API_KEY=your_actual_gemini_api_key_here
    ```
 
-4. **Start the dev server**
+4. **Run the development server:**
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5. **Open in browser:**
+   Navigate to [http://localhost:3000](http://localhost:3000).
 
-## 🏗️ Project Structure
+---
+
+## 📁 Project Structure
 
 ```
 cooking-chatbot/
 ├── app/
-│   ├── api/chat/
-│   │   └── route.ts        # Server-side Gemini API handler
-│   ├── globals.css          # Full design system
-│   ├── layout.tsx           # Root layout with fonts & metadata
-│   └── page.tsx             # Home page
+│   ├── api/
+│   │   └── chat/
+│   │       └── route.ts        # Server-side Gemini API route handler & fallback
+│   ├── globals.css             # Glassmorphic CSS design system
+│   ├── layout.tsx              # Root HTML & font configuration
+│   └── page.tsx                # Home page wrapper
 ├── components/
-│   ├── ChatInterface.tsx    # Main chat UI & state management
-│   ├── FilterChips.tsx      # Dietary/cuisine/time filter chips
-│   ├── RecipeCard.tsx       # Structured recipe card renderer
-│   ├── MessageBubble.tsx    # User & assistant message bubbles
-│   └── LoadingIndicator.tsx # Animated loading state
-├── types.ts                 # Shared TypeScript interfaces
-├── .env.example             # Environment variable template
+│   ├── ChatInterface.tsx       # Main chat state manager & message stream
+│   ├── FilterChips.tsx         # Dietary, cuisine & cooking time selectors
+│   ├── LoadingIndicator.tsx    # Animated culinary loading spinner
+│   ├── MessageBubble.tsx       # User & AI message presentation
+│   └── RecipeCard.tsx          # Structured recipe card renderer
+├── public/                     # Static icons and assets
+├── types.ts                    # Shared TypeScript interfaces
+├── .env.example                # Sample environment template
 └── README.md
 ```
 
+---
+
 ## 🌐 Deployment
 
-### Vercel (recommended)
+The application is deployed on **Vercel**:
+* **Live App:** [https://cooking-chatbot-three.vercel.app](https://cooking-chatbot-three.vercel.app)
 
-1. Push your code to GitHub
-2. Import the repo in [Vercel](https://vercel.com)
-3. Add `GEMINI_API_KEY` as an environment variable in Vercel project settings
-4. Deploy — that's it!
+To deploy your own instance:
+1. Fork or push this repository to GitHub.
+2. Import the project into [Vercel](https://vercel.com).
+3. Under **Project Settings → Environment Variables**, add:
+   * Key: `GEMINI_API_KEY`
+   * Value: `<your-gemini-api-key>`
+4. Deploy!
 
-### Self-hosted
+---
 
-```bash
-npm run build
-npm start
-```
-
-Make sure `GEMINI_API_KEY` is set in your environment.
-
-## 🛡️ Security
-
-- The Gemini API key is **never** sent to the browser
-- All AI calls happen server-side via the `/api/chat` route handler
-- The key is read from `process.env.GEMINI_API_KEY` at runtime
-
-## 📝 License
-
-MIT
-
-## ?? Team & Collaborators
+## 👥 Team & Collaborators
 
 | Member | Role | GitHub |
 |---|---|---|
-| **Atharva Kalambe** (Lead) | Full-Stack & AI Architecture | [@Atharva](https://github.com) |
+| **Atharva Kalambe** (Lead) | Full-Stack & AI Architecture | [@atharvakalambe](https://github.com/atharvakalambe) |
 | **Collaborator 2** | Frontend Development | [@username](https://github.com) |
 | **Collaborator 3** | UI/UX & Design System | [@username](https://github.com) |
 | **Collaborator 4** | Prompt Engineering & Testing | [@username](https://github.com) |
 | **Collaborator 5** | Backend & API Integration | [@username](https://github.com) |
 | **Collaborator 6** | Documentation & QA | [@username](https://github.com) |
+
+---
+
+## 🔒 Security
+
+- The `GEMINI_API_KEY` is loaded strictly on the server-side via `process.env`.
+- API keys are never bundled in client JavaScript or exposed over HTTP headers.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
