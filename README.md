@@ -123,11 +123,11 @@ To deploy your own instance:
 | Member | Role | GitHub |
 |---|---|---|
 | **Atharva Kalambe** (Lead) | Full-Stack & AI Architecture | [@atharvakalambe](https://github.com/atharvakalambe) |
-| **Collaborator 2** | Frontend Development | [@username](https://github.com) |
-| **Collaborator 3** | UI/UX & Design System | [@username](https://github.com) |
-| **Collaborator 4** | Prompt Engineering & Testing | [@username](https://github.com) |
-| **Collaborator 5** | Backend & API Integration | [@username](https://github.com) |
-| **Collaborator 6** | Documentation & QA | [@username](https://github.com) |
+| **Collaborator 2** | Frontend Development | [@SkHassan1573](https://github.com/SkHassan1573) |
+| **Collaborator 3** | UI/UX & Design System | [@Meetdholam](https://github.com/Meetdholam) |
+| **Collaborator 4** | Prompt Engineering & Testing | [@arpit-rgbt](https://github.com/arpit-rgbt) |
+| **Collaborator 5** | Backend & API Integration | [@pranayth-dev](https://github.com/pranayth-dev) |
+| **Collaborator 6** | Documentation & QA | [@kanojiaravi305-tech](https://github.com/kanojiaravi305-tech) |
 
 ---
 
