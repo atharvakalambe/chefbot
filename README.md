@@ -123,11 +123,11 @@ To deploy your own instance:
 | Member | Role | GitHub |
 |---|---|---|
 | **Atharva Kalambe** (Lead) | Full-Stack & AI Architecture | [@atharvakalambe](https://github.com/atharvakalambe) |
-| **Collaborator 2** | Frontend Development | [@SkHassan1573](https://github.com/SkHassan1573) |
-| **Collaborator 3** | UI/UX & Design System | [@Meetdholam](https://github.com/Meetdholam) |
-| **Collaborator 4** | Prompt Engineering & Testing | [@arpit-rgbt](https://github.com/arpit-rgbt) |
-| **Collaborator 5** | Backend & API Integration | [@pranayth-dev](https://github.com/pranayth-dev) |
-| **Collaborator 6** | Documentation & QA | [@kanojiaravi305-tech](https://github.com/kanojiaravi305-tech) |
+| **Shaikh Hassan** | Frontend Development | [@SkHassan1573](https://github.com/SkHassan1573) |
+| **Meet Dholam** | UI/UX & Design System | [@Meetdholam](https://github.com/Meetdholam) |
+| **Arpit Shinde** | Prompt Engineering & Testing | [@arpit-rgbt](https://github.com/arpit-rgbt) |
+| **Pranay Thombare** | Backend & API Integration | [@pranayth-dev](https://github.com/pranayth-dev) |
+| **Ravi Kanojia** | Documentation & QA | [@kanojiaravi305-tech](https://github.com/kanojiaravi305-tech) |
 
 ---
 
