@@ -122,7 +122,7 @@ To deploy your own instance:
 
 | Member | Role | GitHub |
 |---|---|---|
-| **Atharva Kalambe** (Lead) | Full-Stack & AI Architecture | [@atharvakalambe](https://github.com/atharvakalambe) |
+| **Atharva Kalambe** | Full-Stack & AI Architecture | [@atharvakalambe](https://github.com/atharvakalambe) |
 | **Shaikh Hassan** | Frontend Development | [@SkHassan1573](https://github.com/SkHassan1573) |
 | **Meet Dholam** | UI/UX & Design System | [@Meetdholam](https://github.com/Meetdholam) |
 | **Arpit Shinde** | Prompt Engineering & Testing | [@arpit-rgbt](https://github.com/arpit-rgbt) |
