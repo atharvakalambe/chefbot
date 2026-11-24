@@ -1,32 +1,50 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import type { ChatRequest, Recipe } from "@/types";
+import type { ChatRequest, Recipe, Language } from "@/types";
 
-const SYSTEM_PROMPT = `You are a professional chef assistant. The user will tell you what they want to cook — ingredients they have, dietary needs, cuisine preferences, and time available.
+const LANGUAGE_NAMES: Record<Language, string> = {
+  en: "English",
+  hi: "Hindi (हिन्दी)",
+  mr: "Marathi (मराठी)",
+  es: "Spanish (Español)",
+  fr: "French (Français)",
+  de: "German (Deutsch)",
+  it: "Italian (Italiano)",
+};
+
+function getSystemPrompt(targetLang: Language): string {
+  const langName = LANGUAGE_NAMES[targetLang] || "English";
+  return `You are a professional chef assistant. The user will tell you what they want to cook — ingredients they have, dietary needs, cuisine preferences, and time available.
+
+Target Language: ${langName}.
+IMPORTANT LANGUAGE INSTRUCTION:
+You MUST generate all content (recipe title, ingredients names, ingredient quantities, preparation steps, and any conversational message) fluently in ${langName}.
+Keep the JSON keys in English as shown below, but all string values MUST be in ${langName}.
 
 Your job is to generate a complete recipe. You MUST respond with valid JSON in this exact schema:
 
 {
-  "title": "Recipe Name",
+  "title": "Recipe Name in ${langName}",
   "servings": 4,
-  "time": "25 minutes",
+  "time": "25 minutes (in ${langName})",
   "ingredients": [
-    { "name": "ingredient name", "quantity": "amount with unit" }
+    { "name": "ingredient name in ${langName}", "quantity": "amount with unit in ${langName}" }
   ],
   "steps": [
-    "Step 1 description",
-    "Step 2 description"
+    "Step 1 description in ${langName}",
+    "Step 2 description in ${langName}"
   ]
 }
 
 Rules:
-- Always include realistic quantities and measurements
-- Steps should be clear and numbered implicitly by array order
+- Always include realistic quantities and measurements in ${langName}
+- Steps should be clear, detailed, and numbered implicitly by array order in ${langName}
 - Time should reflect actual cooking time
 - Servings should be reasonable (default 2-4)
 - If the user asks to modify a previous recipe (e.g. "make it vegan", "double the servings"), apply the modification to the most recent recipe in the conversation
-- If the user's message is a greeting or general question, respond with just a JSON object like: { "title": "", "servings": 0, "time": "", "ingredients": [], "steps": [], "message": "your friendly response here" }
+- If the user's message is a greeting or general question, respond with just a JSON object like: { "title": "", "servings": 0, "time": "", "ingredients": [], "steps": [], "message": "friendly greeting in ${langName}" }
 - ONLY output valid JSON, no markdown, no code fences, no extra text`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -40,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     const body: ChatRequest = await req.json();
-    const { message, filters, history } = body;
+    const { message, filters, history, language = "en" } = body;
 
     if (!message || !message.trim()) {
       return NextResponse.json(
@@ -51,22 +69,23 @@ export async function POST(req: Request) {
 
     // Build filter context string
     const filterParts: string[] = [];
-    if (filters.dietary && filters.dietary !== "none") {
+    if (filters?.dietary && filters.dietary !== "none") {
       filterParts.push(`Dietary restriction: ${filters.dietary}`);
     }
-    if (filters.cuisine && filters.cuisine !== "any") {
+    if (filters?.cuisine && filters.cuisine !== "any") {
       filterParts.push(`Cuisine preference: ${filters.cuisine}`);
     }
-    if (filters.time) {
+    if (filters?.time && filters.time !== "any") {
       filterParts.push(`Time available: ${filters.time}`);
     }
 
-    const filterContext = filterParts.length > 0
-      ? `\n\n[User preferences: ${filterParts.join(", ")}]`
-      : "";
+    const langName = LANGUAGE_NAMES[language] || "English";
+    filterParts.push(`Target language: ${langName}`);
+
+    const filterContext = `\n\n[User context: ${filterParts.join(", ")}]`;
 
     // Build conversation history for context
-    const conversationHistory = history.map((msg) => ({
+    const conversationHistory = (history || []).map((msg) => ({
       role: msg.role === "user" ? ("user" as const) : ("model" as const),
       parts: [{ text: msg.content }],
     }));
@@ -82,20 +101,22 @@ export async function POST(req: Request) {
     // Try models in order — if one quota is exhausted, fall back to the next
     const MODELS = [
       "gemini-3.5-flash-lite",
-      "gemini-3.5-flash", 
+      "gemini-3.5-flash",
       "gemini-2.5-flash",
       "gemini-2.0-flash-lite",
-      "gemini-2.0-flash"
+      "gemini-2.0-flash",
     ];
     let responseText = "";
     let lastError: unknown = null;
+
+    const systemPrompt = getSystemPrompt(language);
 
     for (const model of MODELS) {
       try {
         const response = await ai.models.generateContent({
           model,
           config: {
-            systemInstruction: SYSTEM_PROMPT,
+            systemInstruction: systemPrompt,
             responseMimeType: "application/json",
           },
           contents: conversationHistory,
@@ -106,8 +127,12 @@ export async function POST(req: Request) {
       } catch (err) {
         lastError = err;
         const errStr = err instanceof Error ? err.message : String(err);
-        // Only retry on rate limit / quota errors
-        if (errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("quota")) {
+        // Retry on rate limit / quota errors
+        if (
+          errStr.includes("429") ||
+          errStr.includes("RESOURCE_EXHAUSTED") ||
+          errStr.includes("quota")
+        ) {
           console.warn(`Model ${model} quota exhausted, trying next...`);
           continue;
         }
@@ -133,43 +158,58 @@ export async function POST(req: Request) {
 
     // Check if it's a conversational response (no real recipe)
     if (!parsed.title || parsed.title === "") {
+      const defaultReplies: Record<Language, string> = {
+        en: "I'm your cooking assistant! Tell me what ingredients you have or what you'd like to cook, and I'll whip up a recipe for you. 🍳",
+        hi: "मैं आपका कुकिंग असिस्टेंट हूँ! मुझे बताएं आपके पास क्या सामग्री है, और मैं आपके लिए एक स्वादिष्ट रेसिपी बनाऊँगा। 🍳",
+        mr: "मी तुमचा शेफ सहाय्यक आहे! तुमच्याकडे काय साहित्य आहे ते सांगा, मी तुमच्यासाठी छान रेसिपी तयार करतो. 🍳",
+        es: "¡Soy tu asistente de cocina! Dime qué ingredientes tienes o qué deseas cocinar, y te prepararé una receta deliciosa. 🍳",
+        fr: "Je suis votre assistant culinaire ! Dites-moi quels ingrédients vous avez ou ce que vous voulez cuisiner, et je vous prépare une recette. 🍳",
+        de: "Ich bin dein Kochassistent! Sag mir, welche Zutaten du hast oder was du kochen möchtest, und ich erstelle ein Rezept für dich. 🍳",
+        it: "Sono il tuo assistente culinario! Dimmi quali ingredienti hai o cosa vuoi cucinare e creerò una deliziosa ricetta per te. 🍳",
+      };
       return NextResponse.json({
-        reply: parsed.message || "I'm your cooking assistant! Tell me what ingredients you have or what you'd like to cook, and I'll whip up a recipe for you. 🍳",
+        reply: parsed.message || defaultReplies[language] || defaultReplies.en,
         recipe: undefined,
       });
     }
 
     // Return structured recipe
-    const recipe: Recipe = {
-      title: parsed.title,
-      servings: parsed.servings,
-      time: parsed.time,
-      ingredients: parsed.ingredients,
-      steps: parsed.steps,
-    };
-
     return NextResponse.json({
-      reply: `Here's a recipe for **${recipe.title}**!`,
-      recipe,
+      reply: parsed.title,
+      recipe: {
+        title: parsed.title,
+        servings: parsed.servings || 2,
+        time: parsed.time || "20 mins",
+        ingredients: parsed.ingredients || [],
+        steps: parsed.steps || [],
+      },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Chat API error:", error);
 
-    // Detect rate-limit / quota errors from Gemini
-    const errorStr = error instanceof Error ? error.message : String(error);
-    if (errorStr.includes("429") || errorStr.includes("RESOURCE_EXHAUSTED") || errorStr.includes("quota")) {
-      // Try to extract retry delay
-      const retryMatch = errorStr.match(/retry\s*(?:in|Delay[:\s]*"?)(\d+)/i);
-      const retrySeconds = retryMatch ? parseInt(retryMatch[1], 10) : 60;
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+
+    // Detect rate limit errors
+    if (
+      errorMessage.includes("429") ||
+      errorMessage.includes("RESOURCE_EXHAUSTED") ||
+      errorMessage.includes("quota")
+    ) {
+      let retryDelay = "60s";
+      const match = errorMessage.match(/retry in ([0-9.]+s)/);
+      if (match) retryDelay = match[1];
+
       return NextResponse.json(
-        { error: `⏳ Gemini API rate limit reached. Please wait ~${retrySeconds}s and try again. (Free-tier quota resets every minute)` },
+        {
+          error: `Gemini API rate limit reached. Please wait ~${retryDelay} and try again. (Free-tier quota resets every minute)`,
+          retryDelay,
+        },
         { status: 429 }
       );
     }
 
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: `Failed to generate recipe: ${errorMessage}` },
+      { error: "Failed to generate recipe. Please try again." },
       { status: 500 }
     );
   }

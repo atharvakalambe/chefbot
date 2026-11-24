@@ -1,33 +1,36 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import type { Message, Filters, ChatResponse } from "@/types";
+import { useChat } from "@/context/ChatContext";
 import { FilterChips } from "./FilterChips";
 import { MessageBubble } from "./MessageBubble";
 import { RecipeCard } from "./RecipeCard";
 import { LoadingIndicator } from "./LoadingIndicator";
 
-const DEFAULT_FILTERS: Filters = {
-  dietary: "none",
-  cuisine: "any",
-  time: "30 min",
-};
-
-const SUGGESTIONS = [
-  "🍗 I have chicken, rice, and 20 minutes",
-  "🌶️ Vegetarian dinner, no dairy, feeling spicy",
-  "🍝 Quick Italian pasta with whatever's common",
-  "🥗 Healthy lunch under 15 minutes",
-];
-
 export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const {
+    language,
+    t,
+    activeSession,
+    addMessage,
+    setSessionFilters,
+    toggleSidebar,
+    isSidebarOpen,
+  } = useChat();
+
   const [input, setInput] = useState("");
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const messages = activeSession?.messages || [];
+  const filters = activeSession?.filters || {
+    dietary: "none",
+    cuisine: "any",
+    time: "any",
+  };
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,13 +48,17 @@ export function ChatInterface() {
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
   };
 
+  const handleFiltersChange = (newFilters: Filters) => {
+    setSessionFilters(newFilters);
+  };
+
   const sendMessage = async (messageText?: string) => {
     const text = (messageText || input).trim();
     if (!text || isLoading) return;
 
     setError(null);
 
-    // Add user message
+    // Add user message to active session
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -60,10 +67,9 @@ export function ChatInterface() {
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    addMessage(userMessage);
     setInput("");
 
-    // Reset textarea height
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
     }
@@ -71,7 +77,7 @@ export function ChatInterface() {
     setIsLoading(true);
 
     try {
-      // Build history from previous messages
+      // Build history from current session's prior messages
       const history = messages.map((msg) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content + (msg.recipe ? `\n\nRecipe: ${JSON.stringify(msg.recipe)}` : ""),
@@ -83,6 +89,7 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: text,
           filters,
+          language,
           history,
         }),
       });
@@ -102,9 +109,10 @@ export function ChatInterface() {
         timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      addMessage(assistantMessage);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      const errorMsg =
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
       setError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -120,78 +128,99 @@ export function ChatInterface() {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    // Strip emoji prefix for cleaner message
-    const cleanText = suggestion.replace(/^[^\w]*\s*/, "");
-    sendMessage(cleanText);
+    sendMessage(suggestion);
   };
 
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="app-container">
-      {/* Header */}
-      <header className="app-header">
-        <h1>🍳 ChefBot</h1>
-        <p>Your AI cooking assistant — tell me what you have, I&apos;ll make it delicious</p>
-      </header>
-
-      {/* Messages or Welcome */}
-      {!hasMessages && !isLoading ? (
-        <div className="welcome-container">
-          <div className="welcome-content">
-            <span className="welcome-icon">👨‍🍳</span>
-            <h2 className="welcome-title">What are we cooking today?</h2>
-            <p className="welcome-subtitle">
-              Tell me what ingredients you have, your dietary preferences, or just
-              describe your mood — I&apos;ll generate the perfect recipe for you.
-            </p>
-            <div className="welcome-suggestions">
-              {SUGGESTIONS.map((s, i) => (
-                <button
-                  key={i}
-                  className="suggestion-chip"
-                  onClick={() => handleSuggestionClick(s)}
-                  id={`suggestion-${i}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+    <div className="chat-interface-wrapper">
+      {/* Top Navbar */}
+      <header className="chat-topbar">
+        <div className="topbar-left">
+          <button
+            className="btn-sidebar-toggle"
+            onClick={toggleSidebar}
+            title={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+            aria-label="Toggle sidebar"
+          >
+            ☰
+          </button>
+          <div className="topbar-title-block">
+            <span className="topbar-chat-icon">🍳</span>
+            <h1 className="topbar-title" title={activeSession?.title || t.appName}>
+              {activeSession?.title || t.appName}
+            </h1>
           </div>
         </div>
-      ) : (
-        <div className="chat-messages" id="chat-messages">
-          {messages.map((msg) =>
-            msg.role === "user" ? (
-              <MessageBubble key={msg.id} message={msg} />
-            ) : msg.recipe ? (
-              <div key={msg.id} className="recipe-card-wrapper">
-                <RecipeCard recipe={msg.recipe} />
-              </div>
-            ) : (
-              <MessageBubble key={msg.id} message={msg} />
-            )
-          )}
-          {isLoading && <LoadingIndicator />}
-          {error && (
-            <div className="error-message" id="error-message">
-              ⚠️ {error}
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+
+        <div className="topbar-right">
+          <span className="language-badge">
+            🌐 {language.toUpperCase()}
+          </span>
         </div>
-      )}
+      </header>
 
-      {/* Filter Chips */}
-      <FilterChips filters={filters} onFiltersChange={setFilters} />
+      {/* Main Conversation Stream */}
+      <div className="chat-scroll-area">
+        {!hasMessages && !isLoading ? (
+          <div className="welcome-container">
+            <div className="welcome-content">
+              <span className="welcome-icon">👨‍🍳</span>
+              <h2 className="welcome-title">{t.startCooking}</h2>
+              <p className="welcome-subtitle">
+                {t.placeholder}
+              </p>
+              <div className="welcome-suggestions">
+                {t.quickPrompts.map((s, i) => (
+                  <button
+                    key={i}
+                    className="suggestion-chip"
+                    onClick={() => handleSuggestionClick(s)}
+                    id={`suggestion-${i}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="chat-messages" id="chat-messages">
+            {messages.map((msg) =>
+              msg.role === "user" ? (
+                <MessageBubble key={msg.id} message={msg} />
+              ) : msg.recipe ? (
+                <div key={msg.id} className="recipe-card-wrapper">
+                  <RecipeCard recipe={msg.recipe} />
+                </div>
+              ) : (
+                <MessageBubble key={msg.id} message={msg} />
+              )
+            )}
+            {isLoading && <LoadingIndicator />}
+            {error && (
+              <div className="error-message" id="error-message">
+                ⚠️ {error}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
 
-      {/* Input */}
+      {/* Filter Chips Bar */}
+      <div className="chat-filters-wrapper">
+        <FilterChips filters={filters} onFiltersChange={handleFiltersChange} />
+      </div>
+
+      {/* Input Console */}
       <div className="input-area">
         <div className="input-container">
           <textarea
             ref={inputRef}
             className="input-field"
-            placeholder="Tell me what you want to cook..."
+            placeholder={t.placeholder}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -204,7 +233,8 @@ export function ChatInterface() {
             onClick={() => sendMessage()}
             disabled={!input.trim() || isLoading}
             id="send-button"
-            aria-label="Send message"
+            aria-label={t.send}
+            title={t.send}
           >
             ➤
           </button>
